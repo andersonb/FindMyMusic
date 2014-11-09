@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" 
+    android:keepScreenOn="true" >
+    
+    <Button
+        android:id="@+id/RecordButton"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="20dp"
+        android:layout_gravity="center"
+        android:background="@drawable/round_start_button"
+        android:text="Iniciar"
+        android:textSize="30sp"
+        android:gravity="center"
+        android:layout_centerHorizontal="true" />
+        
+	<TextView
+        android:id="@+id/tvFilename"
+        android:layout_marginTop="20dp"
+		android:layout_width="match_parent"
+		android:layout_height="75dp"
+        android:layout_gravity="center"
+        android:ems="10"
+        android:textSize="25sp"
+        android:gravity="center"
+        android:textIsSelectable="false"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/RecordButton" />
+    
+	<TextView
+	    android:id="@+id/tvStatus"
+	    android:layout_width="match_parent"
+	    android:layout_height="75dp"
+	    android:layout_below="@id/tvFilename"
+	    android:layout_centerHorizontal="true"
+	    android:layout_gravity="center"
+	    android:layout_marginTop="20dp"
+	    android:ems="10"
+	    android:gravity="center"
+	    android:textIsSelectable="false"
+	    android:textSize="25sp" />
+	
+	<ListView android:id="@android:id/list"
+    	android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textSize="25sp"
+        android:gravity="center"
+        android:layout_below="@id/tvStatus" />
+
+	<Chronometer
+	    android:id="@+id/RecordTime"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignBaseline="@+id/tvFilename"
+	    android:layout_alignBottom="@+id/tvFilename"
+	    android:layout_alignParentLeft="true"
+	    android:layout_alignParentRight="true"
+	    android:gravity="center"
+	    android:textSize="30sp" />
+	
+</RelativeLayout>
