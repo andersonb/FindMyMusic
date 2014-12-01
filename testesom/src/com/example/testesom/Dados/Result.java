@@ -15,6 +15,7 @@ public class Result implements Serializable {
     private ArrayList<String> links;
     
     public Result(){
+    	
         
     }
     
@@ -55,10 +56,12 @@ public class Result implements Serializable {
     }
 
     public ArrayList<String> getLinks() {
+        if(links == null)
+        	links = new ArrayList<String>();
         return links;
     }
 
-    public void setLinks(ArrayList<String> links) {
-        this.links = links;
-    }
+//    public void setLinks(ArrayList<String> links) {
+//        this.links = links;
+//    }
 }

@@ -23,6 +23,9 @@ import android.content.Intent;
 import android.database.DataSetObserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -39,13 +42,14 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class ResultActivity extends Activity
                             implements OnItemClickListener {
     
     public static final String EXTRA_RESP = "com.example.testesom.Activities.EXTRA_RESP";
     
-    public static final String TAG = "ResultActivity";
+    public static final String TAG = "FindMyMusic";
     
     private ListView     listaBusca;
     private ImageView    image;
@@ -55,6 +59,7 @@ public class ResultActivity extends Activity
     private TextView    texViewArtista;
     private TextView    texViewAlbum;
     private ProgressBar progressBar;
+    private MediaPlayer mPlayer;
     
     private  Result r ;
     
@@ -62,6 +67,8 @@ public class ResultActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_result);
         getActionBar().setDisplayHomeAsUpEnabled(true);
+        
+        
         
         r = (Result) getIntent().getExtras().getSerializable(EXTRA_RESP);
         
@@ -87,8 +94,13 @@ public class ResultActivity extends Activity
             texViewAlbum.setText(r.getAlbum());
             texViewArtista.setText(r.getArtista());
             texViewTitulo.setText(r.getTitulo());
-            
+            Toast.makeText(getApplicationContext(),r.getLinks().get(0),Toast.LENGTH_LONG).show();
+            Log.d(TAG,r.getLinks().get(0));
+            Log.d(TAG,r.getLinks().toString());
+            (new PlayAsyncTask()).execute(r.getLinks().get(0));
         }
+        
+       
     }
 
     
@@ -108,28 +120,37 @@ public class ResultActivity extends Activity
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
         Intent intent = null;
+        String appPackageName = "";
+        String apps = "/details?id=";
         switch (position) {
-        case 0:
-             intent = new Intent(Intent.ACTION_SEARCH);
-            intent.setPackage("com.google.android.youtube");
-            intent.putExtra("query",  r.toString());
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            break;
-        case 1: 
-            intent = new Intent(Intent.ACTION_MAIN);
-            intent.setAction(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH);
-            intent.setPackage("com.spotify.music");
-            intent.putExtra(SearchManager.QUERY, r.toString());
-            startActivity(intent);    
-            break;
-        case 2: 
-            intent = new Intent(Intent.ACTION_WEB_SEARCH);
-            intent.putExtra(SearchManager.QUERY,r.toString());
-            startActivity(intent);
-
-        default:
-            break;
+	        case 0:       	
+	            intent = new Intent(Intent.ACTION_SEARCH);
+	            intent.setPackage("com.google.android.youtube");
+	            intent.putExtra("query",  r.toString());
+	            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+	            appPackageName = apps + "com.google.android.youtube";
+	            break;
+	        case 1: 
+	            intent = new Intent(Intent.ACTION_MAIN);
+	            intent.setAction(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH);
+	            intent.setPackage("com.spotify.music");
+	            intent.putExtra(SearchManager.QUERY, r.toString());
+	            appPackageName = apps +  "com.spotify.music";
+	            break;
+	        case 2: 
+	            intent = new Intent(Intent.ACTION_WEB_SEARCH);
+	            intent.putExtra(SearchManager.QUERY,r.toString());
+	            break;
+	
+	        default:
+	            break;
+        }
+        
+        try{
+        	startActivity(intent);
+        }catch(Exception e){
+        	startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps" + appPackageName)));
+        	startActivity(intent);
         }
     }
     
@@ -179,6 +200,53 @@ public class ResultActivity extends Activity
     	
     }
     
+    public void onPause(){
+    	super.onPause();
+    	if(mPlayer != null)
+    		mPlayer.release();
+    }
+    
+    
+    private class PlayAsyncTask extends AsyncTask<String, Void, String>{
+    	
+    	
+    	
+
+    	protected String doInBackground(String... params){
+    		
+    		mPlayer = new MediaPlayer();
+			mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+			try {
+				mPlayer.setDataSource(params[0]);
+			} catch (IllegalArgumentException e) {
+				return "You might not set the URI correctly!"+ e.toString();
+			} catch (SecurityException e) {
+				return "You might not set the URI correctly!"+ e.toString();
+			} catch (IllegalStateException e) {
+				return "You might not set the URI correctly!"+ e.toString();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			try {
+				mPlayer.prepare();
+			} catch (IllegalStateException e) {
+				return "You might not set the URI correctly!" + e.toString();
+			} catch (IOException e) {
+				return"You might not set the URI correctly!"+ e.toString();
+			}
+			mPlayer.start();
+			return null;
+    	}
+    	
+    	protected void onPostExecute(String result){
+    		Log.d(TAG,"RESULT"+result);
+    		Toast.makeText(getApplicationContext(),result,Toast.LENGTH_LONG).show();
+    		
+    	}
+    	
+    	
+    }
+    
     
     
     private class DownloadAsyncTask extends AsyncTask<String, Void, Bitmap>{
@@ -209,9 +277,7 @@ public class ResultActivity extends Activity
                 image.setImageResource(R.drawable.ic_launcher);
             }
         }
-        
-            
-        
+         
         
     }
 }

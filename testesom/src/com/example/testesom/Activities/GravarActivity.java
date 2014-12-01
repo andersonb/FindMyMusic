@@ -15,13 +15,20 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.app.ListActivity;
+import android.content.Context;
 import android.content.Intent;
+import android.net.DhcpInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.os.StrictMode;
@@ -55,13 +62,15 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 	private Animation 		blinker;
 	private Animation		blinkerWait;
 	
-	private static final String LOG_TAG = "GravarActivity";
+	private static final String LOG_TAG = "FindMyMusic";
 	
 	private Util util = Util.getInstance();
 	
 	protected void onCreate(Bundle savedInstanceState){
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main1);
+		
+//		(new AsyncTempoGravacao()).execute();
 		
 		StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
 		StrictMode.setThreadPolicy(policy);
@@ -85,9 +94,12 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 	
 	public void onResume(){
 		super.onResume();
+		Log.d(LOG_TAG, "onResume");
         getGravarButton().clearAnimation();
+        getGravarButton().setEnabled(true);
+        isRecording = false;
 		getGravarButton().setBackgroundResource (R.drawable.round_start_button);
-		getGravarButton().setText ("Gravar");
+		getGravarButton().setText ("Ouvir");
 		getRecordTime().setBase(SystemClock.elapsedRealtime());
 		getStatusTextView().setText("");
 	}
@@ -111,22 +123,23 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 			startRecording ();
    		
    	 	}else{
-   	 		stopRecording ();
+   	 		//stopRecording ();
    	 	}
 	}
 	
     private void  enviarAudioServidor(){
         File f = Util1.getArquivo();
         String result = "";
-        
+        Log.d(LOG_TAG, "enviarAudioServidor");
         (new AsyncEnviarServidor()).execute(f);
     }
 	
 	private void stopRecording() {
+		Log.d(LOG_TAG, "stopRecording");
 		isRecording = false;
 		getGravarButton().clearAnimation();
 		getGravarButton().setBackgroundResource (R.drawable.round_start_button);
-		getGravarButton().setText ("Gravar");
+		getGravarButton().setText ("Ouvir");
 		getRecordTime().stop();
 //		getStatusTextView().setText (MsgType.RecStopped.name());
 		util.getMp3Lame().stop();	
@@ -138,13 +151,27 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 		isRecording = true;
 		util.clearMp3Pathname();
 		getGravarButton().setBackgroundResource (R.drawable.round_stop_button);
-		getGravarButton().setText ("Parar");
+		getGravarButton().setText ("Ouvindo..");
 		getGravarButton().startAnimation (getBlinker());
 		getRecordTime().setBase (SystemClock.elapsedRealtime());
 		getRecordTime().start();
 //		getStatusTextView().setText (MsgType.RecStarted.name());
 		util.getMp3Lame().setFilePath (util.getMp3Pathname());
 		util.getMp3Lame().start();
+		 Log.d(LOG_TAG, "startRecording");
+		 
+		 new CountDownTimer(6000, 1000) {
+
+		     public void onTick(long millisUntilFinished) {
+		        // mTextField.setText("seconds remaining: " + millisUntilFinished / 1000);
+		     }
+
+		     public void onFinish() {
+		    	 stopRecording();
+		         //mTextField.setText("done!");
+		     }
+		  }.start();
+		
 //		getTvFilename().setText ("["+Util.getFilenameFromPath (util.getMp3Pathname())+"]");
 	}
 	
@@ -235,6 +262,55 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 		
 		return "";
 	}
+    
+    
+    
+  /*  private class AsyncTempoGravacao extends AsyncTask<Void,Void,Void>{
+    	
+    	WifiManager wifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+    	WifiInfo wifiInfo = wifi.getConnectionInfo();
+    	DhcpInfo dhcp = wifi.getDhcpInfo();
+
+		@Override
+		protected Void doInBackground(Void... params) {
+
+			
+			
+			
+		}
+    	
+    	
+    	
+    }*/
+    
+    
+    private String getLatency(String ip){
+    	String latency = "";
+    	 String pingCmd = "ping -c 8 " + ip;
+    	 try {
+             Runtime r = Runtime.getRuntime();
+             Process p = r.exec(pingCmd);
+             BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+             String inputLine;
+             String latencyResult = null;
+             while ((inputLine = in.readLine()) != null)
+             {
+                 latencyResult = inputLine;
+             }
+             String[] keyValue = latencyResult.split("=");
+             String[] value = keyValue[1].split("/");
+             latency = value[1];              
+             Log.d(LOG_TAG,"LATENCIA"+latency);
+         }
+       
+         catch (Exception e)
+         {
+           Log.d(LOG_TAG, "Exception..."+e);
+         }
+    	 
+    	 return latency;
+    }
+    
 	
     private class AsyncEnviarServidor extends AsyncTask<File, Void, String>{
         
@@ -245,6 +321,9 @@ public class GravarActivity extends ListActivity implements OnClickListener{
     		getGravarButton().setAnimation(getBlinker());
     		getGravarButton().setText("Buscando..");
     		getGravarButton().setTextSize(25);
+    		getGravarButton().setEnabled(false);
+    		
+    		 Log.d(LOG_TAG, "AsyncEnviarServidor:onPreExecute");
     	}
     	
 
@@ -264,8 +343,8 @@ public class GravarActivity extends ListActivity implements OnClickListener{
             int maxBufferSize = 1 * 1024 * 1024; 
             int serverResponseCode = 0;
             
-            String upLoadServerUri = getUrl();//"http://192.168.0.79/testesom/server.php";
-            
+//            String upLoadServerUri = getUrl();//"http://192.168.0.79/testesom/server.php";
+            String upLoadServerUri = "http://179.234.191.67:8081/upload";
             if (!params[0].isFile()) {
                 //dialog.dismiss(); 
                 Log.d(LOG_TAG, "Source File not exist :");
@@ -275,7 +354,6 @@ public class GravarActivity extends ListActivity implements OnClickListener{
                     FileInputStream fileInputStream = new FileInputStream(sourceFile);
                     URL url = new URL(upLoadServerUri);
                      
-                    // Open a HTTP  connection to  the URL
                     conn = (HttpURLConnection) url.openConnection(); 
                     conn.setDoInput(true); // Allow Inputs
                     conn.setDoOutput(true); // Allow Outputs
@@ -320,9 +398,11 @@ public class GravarActivity extends ListActivity implements OnClickListener{
                     // Responses from the server (code and message)
                     serverResponseCode = conn.getResponseCode();
                     String serverResponseMessage = conn.getResponseMessage();
+                    
+                    Log.d(LOG_TAG, "resposta: "+ serverResponseMessage + ":: "+serverResponseCode);
                       
-                    Log.i("uploadFile", "HTTP Response is : "
-                            + serverResponseMessage + ": " + serverResponseCode);
+//                    Log.i("uploadFile", "HTTP Response is : "
+//                            + serverResponseMessage + ": " + serverResponseCode);
                     
                     if(serverResponseCode == 200){
                         InputStream instream = conn.getInputStream();
@@ -358,8 +438,10 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 
 		protected void onPostExecute(String result){
 //			Toast.makeText(GravarActivity.this, result, 1).show();
-			
-			
+			if(result.toUpperCase().startsWith("ERRO")){
+				Log.d(LOG_TAG, "AsyncEnviarServidor:onPreExecute");
+			}
+				 
             JSONObject jobject = null;
             try {
                 jobject= new JSONObject(result);
@@ -369,8 +451,14 @@ public class GravarActivity extends ListActivity implements OnClickListener{
                 r.setAlbum(jobject.getString("album"));
                 r.setArtista(jobject.getString("artista"));
                 r.setTitulo(jobject.getString("titulo"));
-                r.setImagem(jobject.getString("imagem"));   
+                r.setImagem(jobject.getString("imagem"));  
+                JSONArray links = (JSONArray) jobject.get("links");
+                r.getLinks().add(links.get(0).toString());
+                Log.d(LOG_TAG,links.toString());
+                Log.d(LOG_TAG,links.get(0).toString());
+
                 
+                Toast.makeText(getApplicationContext(),r.getLinks().get(0),Toast.LENGTH_LONG).show();
                 
                 Intent i = new Intent(GravarActivity.this,ResultActivity.class);
                 Bundle bundle = new Bundle();
@@ -378,8 +466,6 @@ public class GravarActivity extends ListActivity implements OnClickListener{
 
                 i.putExtras(bundle);
 
-
-                
                 startActivity(i);
                 
                 
@@ -388,20 +474,19 @@ public class GravarActivity extends ListActivity implements OnClickListener{
             }
             
             
-            //Toast.makeText(MainActivity.this, result, 1).show();
-            
         }
         
         
     }
 
 	public void showErrorScreen() {
-		Toast.makeText(GravarActivity.this, "resultado indisponível", 1).show();
+		Toast.makeText(GravarActivity.this, "Resultado indisponível", 1).show();
 		getGravarButton().clearAnimation();
 		getGravarButton().setBackgroundResource (R.drawable.round_start_button);
-		getGravarButton().setText ("Gravar");
+		getGravarButton().setText ("Ouvir");
 		getRecordTime().setBase(SystemClock.elapsedRealtime());
 		getStatusTextView().setText("");
+		Log.d(LOG_TAG,"showErrorScreen");
 		
 	}
 	
